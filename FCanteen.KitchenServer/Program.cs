@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using FCanteen.Data;
 using FCanteen.Data.Entities;
-using FCanteen.KitchenServer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -159,4 +158,26 @@ class Program
 
         return new FCanteenContext(optionsBuilder.Options);
     }
+
+    public class OrderRequest
+    {
+        public string PosName { get; set; } = string.Empty;
+        public List<OrderLineRequest> Lines { get; set; } = new();
+    }
+
+    public class OrderLineRequest
+    {
+        public string MenuItemId { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public string Note { get; set; } = string.Empty;
+    }
+
+    // Dữ liệu trả về Quầy thu ngân
+    public class OrderResponse
+    {
+        public string TicketId { get; set; } = string.Empty;
+        public decimal FinalTotalAmount { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+
 }
