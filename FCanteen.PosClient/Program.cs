@@ -1,9 +1,11 @@
-﻿using System.Net.Sockets;
-using System.Text;
-using System.Text.Json;
-using FCanteen.Data;
+﻿using FCanteen.Data;
+using FCanteen.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
@@ -26,7 +28,11 @@ var dbOptions = new DbContextOptionsBuilder<FCanteenContext>()
 using var context = new FCanteenContext(dbOptions);
 
 // Đọc thực đơn từ database và hiển thị dạng bảng có đánh số
-var menu = context.MenuItems.Where(m => m.IsAvailable).ToList();
+// Đưa danh sách thực đơn ra biến tĩnh để luồng UDP có thể tác động vào
+List<MenuItem> menu = context.MenuItems
+    .Where(m => m.IsAvailable)
+    .OrderBy(m => m.Id) // Thêm dòng này để STT luôn đồng nhất
+    .ToList();
 Console.WriteLine("\n--- THỰC ĐƠN HÔM NAY ---");
 Console.WriteLine($"{"STT",-5} | {"Mã món",-6} | {"Tên món",-20} | {"Giá",-10}");
 Console.WriteLine(new string('-', 50));
@@ -40,6 +46,30 @@ for (int i = 0; i < menu.Count; i++)
 var orderLines = new List<OrderLineRequest>();
 decimal temporaryTotal = 0;
 
+// --- YC4: LẮNG NGHE THÔNG BÁO HẾT MÓN (UDP) ---
+_ = Task.Run(async () =>
+{
+    using var udpClient = new UdpClient();
+    // Cấu hình ReuseAddress để 3 quầy có thể chạy trên cùng 1 máy tính mà không bị lỗi trùng cổng
+    udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+    udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, 9501));
+
+    while (true)
+    {
+        var result = await udpClient.ReceiveAsync();
+        string outOfStockId = Encoding.UTF8.GetString(result.Buffer);
+
+        // Tìm món trong danh sách và đánh dấu không chọn được nữa
+        var itemToDisable = menu.FirstOrDefault(m => m.Id == outOfStockId);
+        if (itemToDisable != null)
+        {
+            itemToDisable.IsAvailable = false;
+            Console.WriteLine($"\n[CẢNH BÁO BẾP] Món {itemToDisable.Name} ({itemToDisable.Id}) vừa hết hàng! Vui lòng không order nữa.");
+            Console.Write("Nhập STT món (hoặc nhấn Enter để chốt đơn): "); // In lại prompt
+        }
+    }
+});
+
 Console.WriteLine("\n--- TẠO ĐƠN HÀNG ---");
 while (true)
 {
@@ -51,12 +81,25 @@ while (true)
     if (int.TryParse(input, out int stt) && stt >= 1 && stt <= menu.Count)
     {
         var selectedItem = menu[stt - 1];
+        if (!selectedItem.IsAvailable)
+        {
+            Console.WriteLine($"[LỖI] Món {selectedItem.Name} vừa được báo HẾT HÀNG! Vui lòng chọn món khác.");
+            continue;
+        }
 
         Console.Write($"Số lượng {selectedItem.Name}: ");
         if (int.TryParse(Console.ReadLine(), out int qty) && qty > 0)
         {
             Console.Write("Ghi chú (không cay, ít đá...): ");
             string note = Console.ReadLine() ?? "";
+
+            // --- BỔ SUNG CHỐT KIỂM TRA THỨ 2 Ở ĐÂY ---
+            // Đảm bảo trong lúc nhập số lượng/ghi chú, món ăn chưa bị luồng UDP báo hết
+            if (!selectedItem.IsAvailable)
+            {
+                Console.WriteLine($"\n[LỖI] Rất tiếc! Trong lúc bạn đang nhập, món {selectedItem.Name} vừa được báo HẾT HÀNG. Đã huỷ thao tác thêm món.");
+                continue; // Bỏ qua việc add vào orderLines và quay lại vòng lặp chọn món
+            }
 
             orderLines.Add(new OrderLineRequest
             {

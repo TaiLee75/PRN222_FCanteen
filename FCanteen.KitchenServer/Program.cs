@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
         TcpListener server = null;
@@ -18,6 +18,11 @@ class Program
             // Lắng nghe cổng 9500
             int port = 9500;
             server = new TcpListener(IPAddress.Any, port);
+            // --- YC4: ĐỒNG BỘ GIÁ BẰNG HTTP CLIENT & DNS ---
+            await SyncPricesAsync();
+
+            // --- TẠO LUỒNG NHẬP LỆNH BÁO HẾT MÓN (UDP) ---
+            _ = Task.Run(() => HandleAdminCommandsAsync());
             server.Start();
             Console.WriteLine($"[BẾP] Máy chủ đang chạy tại cổng {port}...");
 
@@ -157,6 +162,107 @@ class Program
         optionsBuilder.UseSqlServer(config.GetConnectionString("DefaultConnection"));
 
         return new FCanteenContext(optionsBuilder.Options);
+    }
+
+    // Hàm đồng bộ giá
+    static async Task SyncPricesAsync()
+    {
+        string url = "https://raw.githubusercontent.com/minhtan123/dummy/main/prices.json";
+        Console.WriteLine("\n--- YC4: ĐỒNG BỘ GIÁ TỪ SERVER TRUNG TÂM ---");
+
+        // 1. Phân tích Uri và Dns
+        Uri uri = new Uri(url);
+        Console.WriteLine($"[DNS] Scheme: {uri.Scheme}, Host: {uri.Host}, Port: {uri.Port}");
+
+        var ips = await System.Net.Dns.GetHostAddressesAsync(uri.Host);
+        Console.WriteLine($"[DNS] IP Addresses: {string.Join(", ", ips.Select(ip => ip.ToString()))}");
+
+        // 2. Gọi HTTP Client
+        using var httpClient = new HttpClient();
+        using var context = GetDbContext(); // Sử dụng hàm GetDbContext() của bạn
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        try
+        {
+            var response = await httpClient.GetAsync(uri);
+            stopwatch.Stop();
+
+            // Ghi DeviceLog cho HTTP
+            context.DeviceLogs.Add(new DeviceLog
+            {
+                Protocol = "HTTP",
+                SourceAddress = uri.Host,
+                Content = $"Đồng bộ giá. Status: {response.StatusCode}",
+                Timestamp = DateTime.Now
+            });
+            await context.SaveChangesAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                string json = await response.Content.ReadAsStringAsync();
+                var priceUpdates = JsonSerializer.Deserialize<List<PriceUpdateDto>>(json);
+
+                if (priceUpdates != null)
+                {
+                    int updateCount = 0;
+                    foreach (var update in priceUpdates)
+                    {
+                        var item = await context.MenuItems.FindAsync(update.Id);
+                        if (item != null && item.Price != update.Price)
+                        {
+                            item.Price = update.Price;
+                            updateCount++;
+                        }
+                    }
+                    await context.SaveChangesAsync();
+                    Console.WriteLine($"[HTTP] Đã cập nhật giá cho {updateCount} món (Phản hồi: {stopwatch.ElapsedMilliseconds}ms)\n");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[LỖI HTTP]: {ex.Message}");
+        }
+    }
+
+    // Hàm đọc lệnh từ bàn phím để phát UDP
+    static async Task HandleAdminCommandsAsync()
+    {
+        using var udpServer = new UdpClient();
+        udpServer.EnableBroadcast = true;
+        var endPoint = new IPEndPoint(IPAddress.Broadcast, 9501);
+
+        while (true)
+        {
+            string? input = Console.ReadLine()?.Trim();
+            if (!string.IsNullOrEmpty(input) && input.StartsWith("HET "))
+            {
+                string itemId = input.Substring(4);
+
+                using var context = GetDbContext(); // Sử dụng hàm GetDbContext() của bạn
+                var item = await context.MenuItems.FindAsync(itemId);
+                if (item != null)
+                {
+                    item.IsAvailable = false;
+                    await context.SaveChangesAsync();
+
+                    byte[] bytes = Encoding.UTF8.GetBytes(itemId);
+                    await udpServer.SendAsync(bytes, bytes.Length, endPoint);
+                    Console.WriteLine($"[UDP BROADCAST] Đã phát thông báo hết món: {itemId}");
+                }
+                else
+                {
+                    Console.WriteLine($"[LỖI] Không tìm thấy món {itemId}");
+                }
+            }
+        }
+    }
+
+    // DTO cho giá cập nhật
+    public class PriceUpdateDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public decimal Price { get; set; }
     }
 
     public class OrderRequest
