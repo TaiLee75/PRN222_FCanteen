@@ -1,10 +1,5 @@
-﻿using FCanteen.Data.Entities;
+using FCanteen.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FCanteen.Data
 {
@@ -16,17 +11,22 @@ namespace FCanteen.Data
         public DbSet<OrderTicket> OrderTickets { get; set; }
         public DbSet<TicketLine> TicketLines { get; set; }
         public DbSet<DeviceLog> DeviceLogs { get; set; }
+        public DbSet<Ingredient> Ingredients { get; set; }           // YC1 - bảng nguyên liệu
+        public DbSet<DailySettlement> DailySettlements { get; set; } // YC1 - bảng chốt ca
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Cấu hình kiểu dữ liệu decimal cho các cột tiền tệ
+            // Ép kiểu decimal(18,2) cho các cột tiền và số lượng
             modelBuilder.Entity<MenuItem>().Property(m => m.Price).HasColumnType("decimal(18, 2)");
             modelBuilder.Entity<OrderTicket>().Property(o => o.TotalAmount).HasColumnType("decimal(18, 2)");
             modelBuilder.Entity<TicketLine>().Property(t => t.UnitPrice).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<Ingredient>().Property(i => i.Stock).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<Ingredient>().Property(i => i.WarningThreshold).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<DailySettlement>().Property(d => d.TotalRevenue).HasColumnType("decimal(18, 2)");
 
-            // Tự động seed 15 món ăn theo yêu cầu (chỉ dùng HasData, không dùng INSERT thủ công)
+            // Seed 15 món ăn mặc định
             var menuItems = new List<MenuItem>();
             for (int i = 1; i <= 15; i++)
             {

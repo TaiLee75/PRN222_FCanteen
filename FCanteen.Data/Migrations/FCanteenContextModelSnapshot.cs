@@ -22,6 +22,35 @@ namespace FCanteen.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("FCanteen.Data.Entities.DailySettlement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BranchCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("CalculationTimeMs")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("TotalRevenue")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("TotalTickets")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DailySettlements");
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.DeviceLog", b =>
                 {
                     b.Property<int>("Id")
@@ -48,6 +77,33 @@ namespace FCanteen.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("DeviceLogs");
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.Ingredient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Stock")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("WarningThreshold")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Ingredients");
                 });
 
             modelBuilder.Entity("FCanteen.Data.Entities.MenuItem", b =>
@@ -200,6 +256,10 @@ namespace FCanteen.Data.Migrations
                 {
                     b.Property<string>("TicketId")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BranchCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
