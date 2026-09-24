@@ -79,6 +79,33 @@ namespace FCanteen.Data.Migrations
                     b.ToTable("DeviceLogs");
                 });
 
+            modelBuilder.Entity("FCanteen.Data.Entities.DiscountPolicyLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AppliedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("OrderTicketId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PolicyName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DiscountPolicyLogs");
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.Ingredient", b =>
                 {
                     b.Property<int>("Id")
@@ -278,6 +305,31 @@ namespace FCanteen.Data.Migrations
                     b.HasKey("TicketId");
 
                     b.ToTable("OrderTickets");
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.Staff", b =>
+                {
+                    b.Property<string>("StaffCode")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("WorkingBranch")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.HasKey("StaffCode");
+
+                    b.ToTable("Staffs");
                 });
 
             modelBuilder.Entity("FCanteen.Data.Entities.TicketLine", b =>

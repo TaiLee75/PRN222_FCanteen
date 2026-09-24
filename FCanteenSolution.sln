@@ -1,13 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.37628.2 d17.14
+VisualStudioVersion = 17.14.37628.2
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCanteen.Data", "FCanteen.Data\FCanteen.Data.csproj", "{758F42BC-9015-4F3C-A743-94B8B6F48EF2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCanteen.KitchenServer", "FCanteen.KitchenServer\FCanteen.KitchenServer.csproj", "{A105B63F-A475-4F12-B3EC-53B901DA2DF2}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCanteen.ConsoleApp", "FCanteen.KitchenServer\FCanteen.ConsoleApp.csproj", "{A105B63F-A475-4F12-B3EC-53B901DA2DF2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCanteen.PosClient", "FCanteen.PosClient\FCanteen.PosClient.csproj", "{1AC6F5E5-BE5C-4BF5-994C-0677BC3955DE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCanteen.Repositories", "FCanteen.Repositories\FCanteen.Repositories.csproj", "{F2F3C003-4F9D-4327-9FC5-250327BCA9CD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FCanteen.Services", "FCanteen.Services\FCanteen.Services.csproj", "{175A18E0-B923-4ECF-BBB6-67B1C0386289}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +31,14 @@ Global
 		{1AC6F5E5-BE5C-4BF5-994C-0677BC3955DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1AC6F5E5-BE5C-4BF5-994C-0677BC3955DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1AC6F5E5-BE5C-4BF5-994C-0677BC3955DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2F3C003-4F9D-4327-9FC5-250327BCA9CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2F3C003-4F9D-4327-9FC5-250327BCA9CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2F3C003-4F9D-4327-9FC5-250327BCA9CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2F3C003-4F9D-4327-9FC5-250327BCA9CD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{175A18E0-B923-4ECF-BBB6-67B1C0386289}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{175A18E0-B923-4ECF-BBB6-67B1C0386289}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{175A18E0-B923-4ECF-BBB6-67B1C0386289}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{175A18E0-B923-4ECF-BBB6-67B1C0386289}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

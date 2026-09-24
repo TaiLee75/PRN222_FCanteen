@@ -11,6 +11,14 @@ namespace FCanteen.Data
     {
         public static async Task SeedLargeDataAsync(FCanteenContext context)
         {
+            // Tự động dọn dẹp nếu lỡ tay xóa TicketLines mà quên xóa OrderTickets
+            if (context.OrderTickets.Any() && !context.TicketLines.Any())
+            {
+                Console.WriteLine("Phat hien du lieu bi lech, dang don dep ban nhap cu...");
+                context.OrderTickets.RemoveRange(context.OrderTickets);
+                await context.SaveChangesAsync();
+            }
+
             // Nếu đã đủ 50k rồi thì bỏ qua (giữ lại data cũ của Lab 01)
             if (context.OrderTickets.Count() >= 50000) return;
 

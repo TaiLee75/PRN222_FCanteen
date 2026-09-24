@@ -14,6 +14,11 @@ namespace FCanteen.Data
         public DbSet<Ingredient> Ingredients { get; set; }           // YC1 - bảng nguyên liệu
         public DbSet<DailySettlement> DailySettlements { get; set; } // YC1 - bảng chốt ca
 
+        public DbSet<Staff> Staffs { get; set; }
+
+        public DbSet<DiscountPolicyLog> DiscountPolicyLogs { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
