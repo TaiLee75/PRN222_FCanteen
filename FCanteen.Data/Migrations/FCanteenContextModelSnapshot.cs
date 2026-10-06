@@ -22,6 +22,49 @@ namespace FCanteen.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("FCanteen.Data.Entities.Category", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Categories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Món chính"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Món phụ"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Đồ uống"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Tráng miệng"
+                        });
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.DailySettlement", b =>
                 {
                     b.Property<int>("Id")
@@ -121,14 +164,22 @@ namespace FCanteen.Data.Migrations
                     b.Property<decimal>("Stock")
                         .HasColumnType("decimal(18, 2)");
 
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18, 2)");
 
                     b.Property<decimal>("WarningThreshold")
                         .HasColumnType("decimal(18, 2)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SupplierId");
 
                     b.ToTable("Ingredients");
                 });
@@ -137,6 +188,12 @@ namespace FCanteen.Data.Migrations
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("CostPrice")
+                        .HasColumnType("decimal(18, 2)");
 
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
@@ -154,12 +211,15 @@ namespace FCanteen.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
                     b.ToTable("MenuItems");
 
                     b.HasData(
                         new
                         {
                             Id = "M01",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 1",
                             Price = 16000m,
@@ -168,6 +228,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M02",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 2",
                             Price = 17000m,
@@ -176,6 +237,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M03",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 3",
                             Price = 18000m,
@@ -184,6 +246,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M04",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 4",
                             Price = 19000m,
@@ -192,6 +255,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M05",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 5",
                             Price = 20000m,
@@ -200,6 +264,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M06",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 6",
                             Price = 21000m,
@@ -208,6 +273,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M07",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 7",
                             Price = 22000m,
@@ -216,6 +282,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M08",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 8",
                             Price = 23000m,
@@ -224,6 +291,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M09",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 9",
                             Price = 24000m,
@@ -232,6 +300,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M10",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 10",
                             Price = 25000m,
@@ -240,6 +309,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M11",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 11",
                             Price = 26000m,
@@ -248,6 +318,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M12",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 12",
                             Price = 27000m,
@@ -256,6 +327,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M13",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 13",
                             Price = 28000m,
@@ -264,6 +336,7 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M14",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 14",
                             Price = 29000m,
@@ -272,11 +345,39 @@ namespace FCanteen.Data.Migrations
                         new
                         {
                             Id = "M15",
+                            CostPrice = 0m,
                             IsAvailable = true,
                             Name = "Món ăn 15",
                             Price = 30000m,
                             Unit = "Phần"
                         });
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.MenuItemIngredient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("IngredientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MenuItemId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IngredientId");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("MenuItemIngredients");
                 });
 
             modelBuilder.Entity("FCanteen.Data.Entities.OrderTicket", b =>
@@ -332,6 +433,44 @@ namespace FCanteen.Data.Migrations
                     b.ToTable("Staffs");
                 });
 
+            modelBuilder.Entity("FCanteen.Data.Entities.Supplier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Suppliers");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Nhà cung cấp Vissan",
+                            Phone = "0123456789"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "CoopMart",
+                            Phone = "0987654321"
+                        });
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.TicketLine", b =>
                 {
                     b.Property<int>("Id")
@@ -366,6 +505,43 @@ namespace FCanteen.Data.Migrations
                     b.ToTable("TicketLines");
                 });
 
+            modelBuilder.Entity("FCanteen.Data.Entities.Ingredient", b =>
+                {
+                    b.HasOne("FCanteen.Data.Entities.Supplier", "Supplier")
+                        .WithMany("Ingredients")
+                        .HasForeignKey("SupplierId");
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.MenuItem", b =>
+                {
+                    b.HasOne("FCanteen.Data.Entities.Category", "Category")
+                        .WithMany("MenuItems")
+                        .HasForeignKey("CategoryId");
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.MenuItemIngredient", b =>
+                {
+                    b.HasOne("FCanteen.Data.Entities.Ingredient", "Ingredient")
+                        .WithMany("MenuItemIngredients")
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FCanteen.Data.Entities.MenuItem", "MenuItem")
+                        .WithMany("MenuItemIngredients")
+                        .HasForeignKey("MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ingredient");
+
+                    b.Navigation("MenuItem");
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.TicketLine", b =>
                 {
                     b.HasOne("FCanteen.Data.Entities.MenuItem", "MenuItem")
@@ -385,9 +561,29 @@ namespace FCanteen.Data.Migrations
                     b.Navigation("OrderTicket");
                 });
 
+            modelBuilder.Entity("FCanteen.Data.Entities.Category", b =>
+                {
+                    b.Navigation("MenuItems");
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.Ingredient", b =>
+                {
+                    b.Navigation("MenuItemIngredients");
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.MenuItem", b =>
+                {
+                    b.Navigation("MenuItemIngredients");
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.OrderTicket", b =>
                 {
                     b.Navigation("TicketLines");
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.Supplier", b =>
+                {
+                    b.Navigation("Ingredients");
                 });
 #pragma warning restore 612, 618
         }

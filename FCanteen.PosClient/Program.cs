@@ -14,12 +14,17 @@ string posName = args.Length > 0 ? args[0] : "QUAY_DEFAULT";
 Console.Title = $"Thu ngân - {posName}";
 Console.WriteLine($"=== HỆ THỐNG THU NGÂN: {posName} ===");
 
-// Lấy chuỗi kết nối từ file appsettings
 var config = new ConfigurationBuilder().SetBasePath(Directory.GetCurrentDirectory()).AddJsonFile("appsettings.json").Build();
-using var context = new FCanteenContext(new DbContextOptionsBuilder<FCanteenContext>().UseSqlServer(config.GetConnectionString("DefaultConnection")).Options);
 
-// Lấy mấy món còn bán
-var menu = context.MenuItems.Where(m => m.IsAvailable).OrderBy(m => m.Id).ToList();
+// YC5: Gọi API lấy thực đơn thay vì gọi thẳng vào Database
+var apiBaseUrl = config.GetSection("ApiSettings")["BaseUrl"] ?? "http://localhost:5082";
+using var httpClient = new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
+var response = await httpClient.GetAsync("/api/MenuItems/Available");
+response.EnsureSuccessStatusCode();
+
+var menuData = await response.Content.ReadAsStringAsync();
+var menu = JsonSerializer.Deserialize<List<MenuItemDto>>(menuData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<MenuItemDto>();
+
 Console.WriteLine("\n--- THỰC ĐƠN HÔM NAY ---");
 Console.WriteLine($"{"STT",-5} | {"Mã món",-6} | {"Tên món",-20} | {"Giá",-10}");
 Console.WriteLine(new string('-', 50));
@@ -126,3 +131,6 @@ async Task SendOrderToServerAsync(OrderRequest orderRequest)
 public class OrderRequest { public string PosName { get; set; } = ""; public List<OrderLineRequest> Lines { get; set; } = new(); }
 public class OrderLineRequest { public string MenuItemId { get; set; } = ""; public int Quantity { get; set; } public string Note { get; set; } = ""; }
 public class OrderResponse { public string TicketId { get; set; } = ""; public decimal FinalTotalAmount { get; set; } public string Message { get; set; } = ""; }
+
+// YC5 DTO
+public class MenuItemDto { public string Id { get; set; } = ""; public string Name { get; set; } = ""; public decimal Price { get; set; } public string Unit { get; set; } = ""; public bool IsAvailable { get; set; } = true; }

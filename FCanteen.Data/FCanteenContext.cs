@@ -17,6 +17,11 @@ namespace FCanteen.Data
         public DbSet<Staff> Staffs { get; set; }
 
         public DbSet<DiscountPolicyLog> DiscountPolicyLogs { get; set; }
+        
+        // Lab 4 DbSets
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<MenuItemIngredient> MenuItemIngredients { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -30,6 +35,25 @@ namespace FCanteen.Data
             modelBuilder.Entity<Ingredient>().Property(i => i.Stock).HasColumnType("decimal(18, 2)");
             modelBuilder.Entity<Ingredient>().Property(i => i.WarningThreshold).HasColumnType("decimal(18, 2)");
             modelBuilder.Entity<DailySettlement>().Property(d => d.TotalRevenue).HasColumnType("decimal(18, 2)");
+
+            // Lab 4 Decimal Types
+            modelBuilder.Entity<MenuItem>().Property(m => m.CostPrice).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<Ingredient>().Property(i => i.UnitPrice).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<MenuItemIngredient>().Property(m => m.Quantity).HasColumnType("decimal(18, 2)");
+
+            // Seed Categories
+            modelBuilder.Entity<Category>().HasData(
+                new Category { Id = 1, Name = "Món chính" },
+                new Category { Id = 2, Name = "Món phụ" },
+                new Category { Id = 3, Name = "Đồ uống" },
+                new Category { Id = 4, Name = "Tráng miệng" }
+            );
+
+            // Seed Suppliers
+            modelBuilder.Entity<Supplier>().HasData(
+                new Supplier { Id = 1, Name = "Nhà cung cấp Vissan", Phone = "0123456789" },
+                new Supplier { Id = 2, Name = "CoopMart", Phone = "0987654321" }
+            );
 
             // Seed 15 món ăn mặc định
             var menuItems = new List<MenuItem>();

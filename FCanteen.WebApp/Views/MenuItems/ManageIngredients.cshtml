@@ -1,0 +1,77 @@
+@model FCanteen.Data.Entities.MenuItem
+
+@{
+    ViewData["Title"] = "Quản lý nguyên liệu món: " + Model.Name;
+}
+
+<h1>Quản lý nguyên liệu: @Model.Name</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<div class="row">
+    <div class="col-md-4">
+        <h4>Thêm định lượng nguyên liệu</h4>
+        <form asp-action="AddIngredient" method="post">
+            <input type="hidden" name="menuItemId" value="@Model.Id" />
+            <div class="form-group mb-2">
+                <label>Nguyên liệu</label>
+                <select name="ingredientId" class="form-control">
+                    @foreach (var ing in ViewBag.Ingredients)
+                    {
+                        <option value="@ing.Id">@ing.Name (Giá: @ing.UnitPrice / @ing.Unit)</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group mb-2">
+                <label>Định lượng</label>
+                <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required />
+            </div>
+            <button type="submit" class="btn btn-primary">Thêm</button>
+        </form>
+        
+        <div class="mt-4">
+            <h4>Thông tin Giá</h4>
+            <p><strong>Giá vốn hiện tại:</strong> @Model.CostPrice</p>
+            <p><strong>Giá bán:</strong> @Model.Price</p>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <h4>Danh sách nguyên liệu của món</h4>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Tên</th>
+                    <th>Định lượng</th>
+                    <th>Đơn vị</th>
+                    <th>Thành tiền (Giá vốn)</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var mi in Model.MenuItemIngredients)
+                {
+                    <tr>
+                        <td>@mi.Ingredient.Name</td>
+                        <td>@mi.Quantity</td>
+                        <td>@mi.Ingredient.Unit</td>
+                        <td>@(mi.Quantity * mi.Ingredient.UnitPrice)</td>
+                        <td>
+                            <form asp-action="RemoveIngredient" method="post">
+                                <input type="hidden" name="menuItemId" value="@Model.Id" />
+                                <input type="hidden" name="ingredientId" value="@mi.IngredientId" />
+                                <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<div>
+    <a asp-action="Index" class="btn btn-secondary">Quay lại danh sách</a>
+</div>

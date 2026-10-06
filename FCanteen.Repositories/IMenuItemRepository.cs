@@ -1,9 +1,14 @@
-﻿using FCanteen.Data.Entities;
+using FCanteen.Data.Entities;
 
 namespace FCanteen.Repositories;
 
 public interface IMenuItemRepository
 {
     Task<List<MenuItem>> GetAllItemsAsync();
-    // Các hàm khác sẽ thêm sau nếu cần
+    IQueryable<MenuItem> GetMenuItemsQueryable();
+    Task<MenuItem?> GetItemByIdAsync(string id);
+    Task AddAsync(MenuItem item);
+    Task UpdateAsync(MenuItem item);
+    Task DeleteAsync(string id);
+    Task<bool> ExistsAsync(string id);
 }
