@@ -1,0 +1,35 @@
+@using FCanteen.Data.Entities
+
+<span class="badge @GetBadgeClass()">
+    @GetStatusText()
+</span>
+
+@code {
+    [Parameter] public int Status { get; set; }
+
+    private string GetBadgeClass()
+    {
+        return Status switch
+        {
+            (int)OrderStatus.Pending => "bg-secondary",
+            (int)OrderStatus.Processing => "bg-warning text-dark",
+            (int)OrderStatus.Ready => "bg-success",
+            (int)OrderStatus.Delivered => "bg-primary",
+            (int)OrderStatus.Cancelled => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusText()
+    {
+        return Status switch
+        {
+            (int)OrderStatus.Pending => "Chờ tiếp nhận",
+            (int)OrderStatus.Processing => "Đang chế biến",
+            (int)OrderStatus.Ready => "Sẵn sàng",
+            (int)OrderStatus.Delivered => "Đã giao",
+            (int)OrderStatus.Cancelled => "Đã huỷ",
+            _ => "Không xác định"
+        };
+    }
+}

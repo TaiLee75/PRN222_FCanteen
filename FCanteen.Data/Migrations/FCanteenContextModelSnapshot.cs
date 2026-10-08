@@ -380,6 +380,38 @@ namespace FCanteen.Data.Migrations
                     b.ToTable("MenuItemIngredients");
                 });
 
+            modelBuilder.Entity("FCanteen.Data.Entities.OrderStatusHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChangedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("NewStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OldStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TicketId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId");
+
+                    b.ToTable("OrderStatusHistories");
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.OrderTicket", b =>
                 {
                     b.Property<string>("TicketId")
@@ -396,9 +428,8 @@ namespace FCanteen.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18, 2)");
@@ -542,6 +573,17 @@ namespace FCanteen.Data.Migrations
                     b.Navigation("MenuItem");
                 });
 
+            modelBuilder.Entity("FCanteen.Data.Entities.OrderStatusHistory", b =>
+                {
+                    b.HasOne("FCanteen.Data.Entities.OrderTicket", "OrderTicket")
+                        .WithMany("StatusHistories")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OrderTicket");
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.TicketLine", b =>
                 {
                     b.HasOne("FCanteen.Data.Entities.MenuItem", "MenuItem")
@@ -578,6 +620,8 @@ namespace FCanteen.Data.Migrations
 
             modelBuilder.Entity("FCanteen.Data.Entities.OrderTicket", b =>
                 {
+                    b.Navigation("StatusHistories");
+
                     b.Navigation("TicketLines");
                 });
 

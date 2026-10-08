@@ -23,6 +23,8 @@ namespace FCanteen.Data
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<MenuItemIngredient> MenuItemIngredients { get; set; }
 
+        // Lab 06
+        public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

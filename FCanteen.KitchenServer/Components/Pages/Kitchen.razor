@@ -1,0 +1,163 @@
+@page "/kitchen"
+@rendermode InteractiveServer
+@using FCanteen.Data
+@using FCanteen.Data.Entities
+@using Microsoft.EntityFrameworkCore
+@implements IDisposable
+@inject IDbContextFactory<FCanteenContext> DbFactory
+
+<PageTitle>Màn hình Bếp</PageTitle>
+
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary m-0">Màn hình Bếp (Tự động làm mới)</h2>
+        <button class="btn btn-danger" @onclick="CreateTestOrderAsync">Tạo Đơn Test (Mock Data)</button>
+    </div>
+
+    <div class="row">
+        <!-- Cột: Chờ tiếp nhận -->
+        <div class="col-md-4">
+            <div class="bg-light p-3 rounded shadow-sm min-vh-100">
+                <h4 class="text-secondary text-center mb-3">Chờ tiếp nhận</h4>
+                @foreach (var order in _pendingOrders)
+                {
+                    <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
+                }
+            </div>
+        </div>
+
+        <!-- Cột: Đang chế biến -->
+        <div class="col-md-4">
+            <div class="bg-light p-3 rounded shadow-sm min-vh-100">
+                <h4 class="text-warning text-center mb-3">Đang chế biến</h4>
+                @foreach (var order in _processingOrders)
+                {
+                    <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
+                }
+            </div>
+        </div>
+
+        <!-- Cột: Sẵn sàng -->
+        <div class="col-md-4">
+            <div class="bg-light p-3 rounded shadow-sm min-vh-100">
+                <h4 class="text-success text-center mb-3">Sẵn sàng</h4>
+                @foreach (var order in _readyOrders)
+                {
+                    <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private System.Threading.Timer? _timer;
+    private List<OrderTicket> _pendingOrders = new();
+    private List<OrderTicket> _processingOrders = new();
+    private List<OrderTicket> _readyOrders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrdersAsync();
+        // Setup timer để load lại data mỗi 5 giây
+        _timer = new System.Threading.Timer(async _ => await RefreshDataAsync(), null, 5000, 5000);
+    }
+
+    private async Task RefreshDataAsync()
+    {
+        try
+        {
+            await LoadOrdersAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Bỏ qua lỗi nếu người dùng đã chuyển sang trang khác
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in RefreshDataAsync: {ex.Message}");
+        }
+    }
+
+    private async Task LoadOrdersAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        var allActiveOrders = await context.OrderTickets.AsNoTracking()
+            .Include(o => o.TicketLines)
+            .ThenInclude(t => t.MenuItem)
+            .Where(o => o.Status == (int)OrderStatus.Pending || o.Status == (int)OrderStatus.Processing || o.Status == (int)OrderStatus.Ready)
+            .OrderBy(o => o.CreatedAt)
+            .ToListAsync();
+
+        _pendingOrders = allActiveOrders.Where(o => o.Status == (int)OrderStatus.Pending).ToList();
+        _processingOrders = allActiveOrders.Where(o => o.Status == (int)OrderStatus.Processing).ToList();
+        _readyOrders = allActiveOrders.Where(o => o.Status == (int)OrderStatus.Ready).ToList();
+    }
+
+    private async Task CreateTestOrderAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        var random = new Random();
+        var menuItems = await context.MenuItems.ToListAsync();
+        if (!menuItems.Any()) return;
+
+        var ticketId = $"TEST{DateTime.Now:HHmmss}{random.Next(10,99)}";
+        var ticket = new OrderTicket
+        {
+            TicketId = ticketId,
+            PosName = "POS_TEST",
+            CreatedAt = DateTime.Now,
+            Status = (int)OrderStatus.Pending,
+            BranchCode = "B01",
+            TotalAmount = 0
+        };
+
+        var line = new TicketLine
+        {
+            OrderTicketId = ticketId,
+            MenuItemId = menuItems[0].Id,
+            Quantity = random.Next(1, 4),
+            UnitPrice = menuItems[0].Price
+        };
+        
+        ticket.TotalAmount = line.Quantity * line.UnitPrice;
+        context.OrderTickets.Add(ticket);
+        context.TicketLines.Add(line);
+        await context.SaveChangesAsync();
+        
+        await LoadOrdersAsync();
+    }
+
+    private async Task HandleStatusChanged(string ticketId, int newStatusAction)
+    {
+        using var context = DbFactory.CreateDbContext();
+        var order = await context.OrderTickets.FirstOrDefaultAsync(o => o.TicketId == ticketId);
+        if (order != null)
+        {
+            var oldStatus = order.Status;
+            order.Status = newStatusAction;
+
+            var history = new OrderStatusHistory
+            {
+                TicketId = ticketId,
+                OldStatus = oldStatus,
+                NewStatus = newStatusAction,
+                ChangedBy = "KitchenStaff", // Giả lập người thao tác
+                ChangedAt = DateTime.Now
+            };
+
+            context.OrderStatusHistories.Add(history);
+            await context.SaveChangesAsync();
+
+            // Refresh UI immediately
+            await LoadOrdersAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}

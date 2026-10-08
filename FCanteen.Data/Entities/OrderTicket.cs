@@ -10,8 +10,9 @@ namespace FCanteen.Data.Entities
         public string PosName { get; set; } = string.Empty;
         public decimal TotalAmount { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public string Status { get; set; } = "Pending";
+        public int Status { get; set; } = (int)OrderStatus.Pending;
 
         public ICollection<TicketLine> TicketLines { get; set; } = new List<TicketLine>();
+        public ICollection<OrderStatusHistory> StatusHistories { get; set; } = new List<OrderStatusHistory>();
     }
 }

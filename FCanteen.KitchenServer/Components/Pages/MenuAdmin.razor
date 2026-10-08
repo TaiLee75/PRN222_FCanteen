@@ -1,0 +1,262 @@
+@page "/menu-admin"
+@rendermode InteractiveServer
+@using FCanteen.Data
+@using FCanteen.Data.Entities
+@using Microsoft.EntityFrameworkCore
+@using System.ComponentModel.DataAnnotations
+@inject IDbContextFactory<FCanteenContext> DbFactory
+@inject IJSRuntime JS
+
+<PageTitle>Quản lý Thực đơn</PageTitle>
+
+<div class="container mt-4">
+    <h2 class="mb-4">Quản lý Thực đơn</h2>
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <input type="text" class="form-control" placeholder="Tìm kiếm món ăn..." 
+                   @bind="SearchTerm" @bind:event="oninput" />
+        </div>
+        <div class="col-md-6 text-end">
+            <button class="btn btn-primary" @onclick="ShowCreateForm">Thêm món mới</button>
+        </div>
+    </div>
+
+    @if (_isEditing)
+    {
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">@(_isExisting ? "Sửa món" : "Thêm món mới")</h5>
+                @if (!string.IsNullOrEmpty(_customError))
+                {
+                    <div class="alert alert-danger p-2 mb-3">@_customError</div>
+                }
+                <EditForm Model="_currentMenu" OnValidSubmit="SaveMenuItemAsync">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label>Mã món</label>
+                        <InputText class="form-control" @bind-Value="_currentMenu.Id" disabled="@_isExisting" />
+                        <ValidationMessage For="@(() => _currentMenu.Id)" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Tên món</label>
+                        <InputText class="form-control" @bind-Value="_currentMenu.Name" />
+                        <ValidationMessage For="@(() => _currentMenu.Name)" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Giá bán</label>
+                        <InputNumber class="form-control" @bind-Value="_currentMenu.Price" />
+                        <ValidationMessage For="@(() => _currentMenu.Price)" class="text-danger" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Đơn vị tính</label>
+                        <InputText class="form-control" @bind-Value="_currentMenu.Unit" />
+                        <ValidationMessage For="@(() => _currentMenu.Unit)" class="text-danger" />
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Lưu</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Hủy</button>
+                </EditForm>
+            </div>
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Mã món</th>
+                    <th>Tên món</th>
+                    <th>ĐVT</th>
+                    <th>Giá bán</th>
+                    <th>Còn bán</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in FilteredMenuItems)
+                {
+                    <tr>
+                        <td>@item.Id</td>
+                        <td>@item.Name</td>
+                        <td>@item.Unit</td>
+                        <td>@item.Price.ToString("N0") đ</td>
+                        <td>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                       checked="@item.IsAvailable" 
+                                       @onchange="@((ChangeEventArgs e) => ToggleAvailabilityAsync(item, e))">
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => EditMenuItem(item)">Sửa</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteMenuItemAsync(item)">Xoá</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    public class MenuViewModel
+    {
+        [Required(ErrorMessage = "Vui lòng nhập Mã món")]
+        public string Id { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Vui lòng nhập Tên món")]
+        public string Name { get; set; } = string.Empty;
+
+        [Range(1, double.MaxValue, ErrorMessage = "Giá bán phải lớn hơn 0")]
+        public decimal Price { get; set; }
+
+        [Required(ErrorMessage = "Vui lòng nhập Đơn vị tính")]
+        public string Unit { get; set; } = "Phần";
+        
+        public bool IsAvailable { get; set; } = true;
+    }
+
+    private List<MenuItem> _menuItems = new();
+    private string _searchTerm = string.Empty;
+    
+    private bool _isEditing = false;
+    private bool _isExisting = false;
+    private MenuViewModel _currentMenu = new();
+    private string _customError = string.Empty;
+
+    public string SearchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            _searchTerm = value;
+            // Việc thay đổi này kết hợp với bind:event="oninput" sẽ tự động update FilteredMenuItems
+        }
+    }
+
+    private IEnumerable<MenuItem> FilteredMenuItems => string.IsNullOrWhiteSpace(SearchTerm) 
+        ? _menuItems 
+        : _menuItems.Where(m => m.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) || m.Id.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMenuAsync();
+    }
+
+    private async Task LoadMenuAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        _menuItems = await context.MenuItems.OrderBy(m => m.Id).ToListAsync();
+    }
+
+    private void ShowCreateForm()
+    {
+        _currentMenu = new MenuViewModel { Id = string.Empty, Name = string.Empty, Unit = "Phần" };
+        _customError = string.Empty;
+        _isEditing = true;
+        _isExisting = false;
+    }
+
+    private void EditMenuItem(MenuItem item)
+    {
+        _currentMenu = new MenuViewModel
+        {
+            Id = item.Id,
+            Name = item.Name,
+            Price = item.Price,
+            Unit = item.Unit,
+            IsAvailable = item.IsAvailable
+        };
+        _customError = string.Empty;
+        _isEditing = true;
+        _isExisting = true;
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+        _customError = string.Empty;
+    }
+
+    private async Task SaveMenuItemAsync()
+    {
+        _customError = string.Empty;
+        using var context = DbFactory.CreateDbContext();
+        
+        // Kiểm tra trùng lặp
+        if (!_isExisting)
+        {
+            if (await context.MenuItems.AnyAsync(m => m.Id.ToLower() == _currentMenu.Id.ToLower()))
+            {
+                _customError = $"Mã món '{_currentMenu.Id}' đã tồn tại!";
+                return;
+            }
+        }
+        
+        if (await context.MenuItems.AnyAsync(m => m.Name.ToLower() == _currentMenu.Name.ToLower() && m.Id != _currentMenu.Id))
+        {
+            _customError = $"Tên món '{_currentMenu.Name}' đã bị trùng với món khác!";
+            return;
+        }
+
+        if (_isExisting)
+        {
+            var existing = await context.MenuItems.FindAsync(_currentMenu.Id);
+            if (existing != null)
+            {
+                existing.Name = _currentMenu.Name;
+                existing.Price = _currentMenu.Price;
+                existing.Unit = _currentMenu.Unit;
+            }
+        }
+        else
+        {
+            var newItem = new MenuItem
+            {
+                Id = _currentMenu.Id,
+                Name = _currentMenu.Name,
+                Price = _currentMenu.Price,
+                Unit = _currentMenu.Unit,
+                IsAvailable = true
+            };
+            context.MenuItems.Add(newItem);
+        }
+        await context.SaveChangesAsync();
+        _isEditing = false;
+        await LoadMenuAsync();
+    }
+
+    private async Task ToggleAvailabilityAsync(MenuItem item, ChangeEventArgs e)
+    {
+        bool isAvailable = (bool)(e.Value ?? true);
+        using var context = DbFactory.CreateDbContext();
+        var existing = await context.MenuItems.FindAsync(item.Id);
+        if (existing != null)
+        {
+            existing.IsAvailable = isAvailable;
+            await context.SaveChangesAsync();
+        }
+        item.IsAvailable = isAvailable; // Update UI model
+    }
+
+    private async Task DeleteMenuItemAsync(MenuItem item)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"Bạn có chắc chắn muốn xoá món {item.Name}?");
+        if (confirmed)
+        {
+            using var context = DbFactory.CreateDbContext();
+            var existing = await context.MenuItems.FindAsync(item.Id);
+            if (existing != null)
+            {
+                context.MenuItems.Remove(existing);
+                await context.SaveChangesAsync();
+                await LoadMenuAsync();
+            }
+        }
+    }
+}

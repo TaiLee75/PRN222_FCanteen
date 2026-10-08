@@ -1,0 +1,71 @@
+@page "/history"
+@rendermode InteractiveServer
+@using FCanteen.Data
+@using FCanteen.Data.Entities
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<FCanteenContext> DbFactory
+
+<PageTitle>Lịch sử Đơn hàng</PageTitle>
+
+<div class="container mt-4">
+    <h2 class="mb-4">Lịch sử Đơn hàng</h2>
+
+    <div class="row">
+        @foreach (var order in _historyOrders)
+        {
+            <div class="col-md-4 mb-3">
+                <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
+            </div>
+        }
+        @if (!_historyOrders.Any())
+        {
+            <div class="col-12 text-center text-muted">Không có đơn hàng nào.</div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<OrderTicket> _historyOrders = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistoryAsync();
+    }
+
+    private async Task LoadHistoryAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        _historyOrders = await context.OrderTickets.AsNoTracking()
+            .Include(o => o.TicketLines)
+            .ThenInclude(t => t.MenuItem)
+            .Where(o => o.Status == (int)OrderStatus.Delivered || o.Status == (int)OrderStatus.Cancelled)
+            .OrderByDescending(o => o.CreatedAt)
+            .Take(50)
+            .ToListAsync();
+    }
+
+    private async Task HandleStatusChanged(string ticketId, int newStatusAction)
+    {
+        // Trong trang lịch sử, nếu user ấn Hủy một đơn Đã giao (trường hợp cực hiếm)
+        using var context = DbFactory.CreateDbContext();
+        var order = await context.OrderTickets.FirstOrDefaultAsync(o => o.TicketId == ticketId);
+        if (order != null)
+        {
+            var oldStatus = order.Status;
+            order.Status = newStatusAction;
+
+            var history = new OrderStatusHistory
+            {
+                TicketId = ticketId,
+                OldStatus = oldStatus,
+                NewStatus = newStatusAction,
+                ChangedBy = "HistoryAdmin",
+                ChangedAt = DateTime.Now
+            };
+
+            context.OrderStatusHistories.Add(history);
+            await context.SaveChangesAsync();
+            await LoadHistoryAsync();
+        }
+    }
+}

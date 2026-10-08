@@ -1,0 +1,49 @@
+@implements IDisposable
+
+<span class="@GetTimerClass()">
+    @ElapsedTime
+</span>
+
+@code {
+    [Parameter] public DateTime CreatedAt { get; set; }
+
+    private System.Threading.Timer? _timer;
+    private string ElapsedTime = "00:00";
+    private bool _isWarning = false;
+
+    protected override void OnInitialized()
+    {
+        UpdateTimer(null);
+        _timer = new System.Threading.Timer(UpdateTimer, null, 0, 1000);
+    }
+
+    private void UpdateTimer(object? state)
+    {
+        var elapsed = DateTime.Now - CreatedAt;
+        if (elapsed.TotalMinutes >= 10 && !_isWarning)
+        {
+            _isWarning = true;
+        }
+
+        ElapsedTime = $"{(int)elapsed.TotalMinutes:D2}:{elapsed.Seconds:D2}";
+        
+        try
+        {
+            InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Component might have been disposed
+        }
+    }
+
+    private string GetTimerClass()
+    {
+        return _isWarning ? "text-danger fw-bold" : "text-muted fw-bold";
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}

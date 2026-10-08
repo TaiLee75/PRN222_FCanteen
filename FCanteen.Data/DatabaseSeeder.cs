@@ -56,7 +56,7 @@ namespace FCanteen.Data
                     TicketId = ticketId,
                     PosName = $"POS_01",
                     CreatedAt = createdAt,
-                    Status = "Completed",
+                    Status = (int)OrderStatus.Delivered,
                     BranchCode = branches[random.Next(branches.Length)],
                     TotalAmount = 0
                 };

@@ -1,0 +1,59 @@
+@using FCanteen.Data.Entities
+
+<div class="card mb-3 shadow-sm @(_isWarning ? "border-danger bg-danger bg-opacity-10" : "")">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold">@Order.TicketId</h6>
+        <StatusBadge Status="Order.Status" />
+    </div>
+    <div class="card-body">
+        <p class="mb-1 text-muted small">
+            Quầy: <strong>@Order.PosName</strong> | Thời gian: <ElapsedTimer CreatedAt="Order.CreatedAt" />
+        </p>
+        <hr class="my-2" />
+        <ul class="list-unstyled mb-2">
+            @if (Order.TicketLines != null)
+            {
+                foreach (var line in Order.TicketLines)
+                {
+                    <li>
+                        - @(line.MenuItem?.Name ?? "Món đã xoá") (x@(line.Quantity))
+                        @if (!string.IsNullOrWhiteSpace(line.Note))
+                        {
+                            <br /><small class="text-danger fst-italic ms-3">Ghi chú: @line.Note</small>
+                        }
+                    </li>
+                }
+            }
+        </ul>
+    </div>
+    <div class="card-footer bg-transparent d-flex justify-content-end gap-2">
+        @if (Order.Status == (int)OrderStatus.Pending)
+        {
+            <button class="btn btn-sm btn-warning" @onclick="() => ChangeStatus(OrderStatus.Processing)">Tiếp nhận</button>
+        }
+        else if (Order.Status == (int)OrderStatus.Processing)
+        {
+            <button class="btn btn-sm btn-success" @onclick="() => ChangeStatus(OrderStatus.Ready)">Xong</button>
+        }
+        else if (Order.Status == (int)OrderStatus.Ready)
+        {
+            <button class="btn btn-sm btn-primary" @onclick="() => ChangeStatus(OrderStatus.Delivered)">Đã giao</button>
+        }
+        @if (Order.Status != (int)OrderStatus.Delivered && Order.Status != (int)OrderStatus.Cancelled)
+        {
+            <button class="btn btn-sm btn-outline-danger" @onclick="() => ChangeStatus(OrderStatus.Cancelled)">Huỷ</button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public OrderTicket Order { get; set; } = null!;
+    [Parameter] public EventCallback<int> OnStatusChanged { get; set; }
+
+    private bool _isWarning => (DateTime.Now - Order.CreatedAt).TotalMinutes >= 10 && Order.Status != (int)OrderStatus.Delivered && Order.Status != (int)OrderStatus.Cancelled;
+
+    private async Task ChangeStatus(OrderStatus newStatus)
+    {
+        await OnStatusChanged.InvokeAsync((int)newStatus);
+    }
+}
