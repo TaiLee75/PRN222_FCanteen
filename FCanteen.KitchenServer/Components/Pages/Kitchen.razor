@@ -2,81 +2,223 @@
 @rendermode InteractiveServer
 @using FCanteen.Data
 @using FCanteen.Data.Entities
+@using FCanteen.KitchenServer.Hubs.Dtos
 @using Microsoft.EntityFrameworkCore
-@implements IDisposable
+@implements IAsyncDisposable
 @inject IDbContextFactory<FCanteenContext> DbFactory
+@inject FCanteen.KitchenServer.Services.IOrderNotificationService NotificationService
+@inject IJSRuntime JS
 
-<PageTitle>Màn hình Bếp</PageTitle>
+<PageTitle>Màn hình Bếp (SignalR Realtime)</PageTitle>
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="text-primary m-0">Màn hình Bếp (Tự động làm mới)</h2>
-        <button class="btn btn-danger" @onclick="CreateTestOrderAsync">Tạo Đơn Test (Mock Data)</button>
+<div class="container-fluid py-3">
+    <!-- Header thông tin & Điều khiển -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 p-3 bg-white rounded shadow-sm border-start border-4 border-primary">
+        <div>
+            <h3 class="text-primary m-0 fw-bold">
+                <i class="bi bi-broadcast"></i> Màn hình Bếp (SignalR Realtime)
+            </h3>
+            <div class="d-flex align-items-center gap-2 mt-1">
+                <span class="badge @(_isConnected ? "bg-success" : "bg-warning text-dark")">
+                    <i class="bi @(_isConnected ? "bi-check-circle-fill" : "bi-arrow-repeat")"></i>
+                    @(_isConnected ? "SignalR Realtime Active" : "Đang kết nối SignalR...")
+                </span>
+                <span class="badge bg-secondary">
+                    <i class="bi bi-shield-check"></i> Đã gỡ bỏ Polling Timer 5s (YC2)
+                </span>
+                <span class="badge bg-info text-dark">
+                    <i class="bi bi-geo-alt-fill"></i> Nhóm: <code>branch:@(_selectedBranch):kitchen</code> (YC3)
+                </span>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3 mt-3 mt-md-0">
+            <!-- Chọn cơ sở Bếp để test phân luồng Groups (YC3) -->
+            <div class="input-group">
+                <span class="input-group-text bg-light fw-bold small">Cơ sở:</span>
+                <select class="form-select form-select-sm" value="@_selectedBranch" @onchange="OnBranchChanged">
+                    <option value="DN">Đà Nẵng (DN)</option>
+                    <option value="HL">Hoà Lạc (HL)</option>
+                </select>
+            </div>
+
+            <!-- Nút giả lập Quầy tạo đơn gửi xuống bếp -->
+            <button class="btn btn-danger btn-sm text-nowrap shadow-sm" @onclick="CreateTestOrderAsync">
+                <i class="bi bi-plus-circle"></i> Quầy gửi đơn mới (@_selectedBranch)
+            </button>
+        </div>
     </div>
 
-    <div class="row">
-        <!-- Cột: Chờ tiếp nhận -->
+    <!-- Thông báo Realtime Toast khi có đơn mới xuất hiện -->
+    @if (!string.IsNullOrEmpty(_latestAlert))
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm d-flex align-items-center justify-content-between" role="alert">
+            <div>
+                <i class="bi bi-bell-fill me-2 fs-5"></i>
+                <strong>Sự kiện Realtime:</strong> @_latestAlert
+            </div>
+            <button type="button" class="btn-close" @onclick='() => _latestAlert = null'></button>
+        </div>
+    }
+
+    <!-- 3 Cột Kanban tương ứng 3 trạng thái -->
+    <div class="row g-3">
+        <!-- Cột 1: Chờ tiếp nhận -->
         <div class="col-md-4">
-            <div class="bg-light p-3 rounded shadow-sm min-vh-100">
-                <h4 class="text-secondary text-center mb-3">Chờ tiếp nhận</h4>
-                @foreach (var order in _pendingOrders)
-                {
-                    <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
-                }
+            <div class="card h-100 border-0 shadow-sm bg-light">
+                <div class="card-header bg-secondary text-white text-center fw-bold py-2">
+                    <i class="bi bi-hourglass-split"></i> Chờ tiếp nhận (@_pendingOrders.Count)
+                </div>
+                <div class="card-body p-2" style="min-height: 70vh;">
+                    @if (!_pendingOrders.Any())
+                    {
+                        <div class="text-center text-muted p-4 fst-italic">Không có đơn chờ</div>
+                    }
+                    else
+                    {
+                        @foreach (var order in _pendingOrders)
+                        {
+                            <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
+                        }
+                    }
+                </div>
             </div>
         </div>
 
-        <!-- Cột: Đang chế biến -->
+        <!-- Cột 2: Đang chế biến -->
         <div class="col-md-4">
-            <div class="bg-light p-3 rounded shadow-sm min-vh-100">
-                <h4 class="text-warning text-center mb-3">Đang chế biến</h4>
-                @foreach (var order in _processingOrders)
-                {
-                    <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
-                }
+            <div class="card h-100 border-0 shadow-sm bg-light">
+                <div class="card-header bg-warning text-dark text-center fw-bold py-2">
+                    <i class="bi bi-fire"></i> Đang chế biến (@_processingOrders.Count)
+                </div>
+                <div class="card-body p-2" style="min-height: 70vh;">
+                    @if (!_processingOrders.Any())
+                    {
+                        <div class="text-center text-muted p-4 fst-italic">Chưa có đơn đang nấu</div>
+                    }
+                    else
+                    {
+                        @foreach (var order in _processingOrders)
+                        {
+                            <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
+                        }
+                    }
+                </div>
             </div>
         </div>
 
-        <!-- Cột: Sẵn sàng -->
+        <!-- Cột 3: Sẵn sàng -->
         <div class="col-md-4">
-            <div class="bg-light p-3 rounded shadow-sm min-vh-100">
-                <h4 class="text-success text-center mb-3">Sẵn sàng</h4>
-                @foreach (var order in _readyOrders)
-                {
-                    <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
-                }
+            <div class="card h-100 border-0 shadow-sm bg-light">
+                <div class="card-header bg-success text-white text-center fw-bold py-2">
+                    <i class="bi bi-check-circle"></i> Sẵn sàng nhận món (@_readyOrders.Count)
+                </div>
+                <div class="card-body p-2" style="min-height: 70vh;">
+                    @if (!_readyOrders.Any())
+                    {
+                        <div class="text-center text-muted p-4 fst-italic">Chưa có đơn sẵn sàng</div>
+                    }
+                    else
+                    {
+                        @foreach (var order in _readyOrders)
+                        {
+                            <OrderCard Order="order" OnStatusChanged="@((int s) => HandleStatusChanged(order.TicketId, s))" />
+                        }
+                    }
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 @code {
-    private System.Threading.Timer? _timer;
+    private bool _isConnected = false;
+    private string _selectedBranch = "DN"; // Mặc định là chi nhánh Đà Nẵng
+    private string? _latestAlert;
     private List<OrderTicket> _pendingOrders = new();
     private List<OrderTicket> _processingOrders = new();
     private List<OrderTicket> _readyOrders = new();
+    private DotNetObjectReference<Kitchen>? _dotNetRef;
 
     protected override async Task OnInitializedAsync()
     {
+        // Load danh sách đơn hàng ban đầu từ CSDL
         await LoadOrdersAsync();
-        // Setup timer để load lại data mỗi 5 giây
-        _timer = new System.Threading.Timer(async _ => await RefreshDataAsync(), null, 5000, 5000);
     }
 
-    private async Task RefreshDataAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        try
+        if (firstRender)
         {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            // Khởi động SignalR trực tiếp trên trình duyệt (đảm bảo không còn Timer 5s)
+            await JS.InvokeVoidAsync("signalRHelper.start", _dotNetRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnConnected(string connectionId)
+    {
+        _isConnected = true;
+        // Tham gia vào nhóm Bếp của chi nhánh hiện tại (YC3: branch:{branchCode}:kitchen)
+        await JS.InvokeVoidAsync("signalRHelper.joinGroup", "JoinBranchKitchen", _selectedBranch);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnUpdateConnectionCount(int count)
+    {
+        // Nhận cập nhật connection count nếu cần
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// YC2: Khi Quầy tạo đơn mới -> Màn hình bếp nhận sự kiện qua SignalR và hiện đơn ngay lập tức
+    /// </summary>
+    [JSInvokable]
+    public async Task OnOrderCreated(OrderCreatedDto order)
+    {
+        if (order.BranchCode == _selectedBranch)
+        {
+            _latestAlert = $"Đơn mới #{order.TicketId} vừa được Quầy gửi xuống ({order.TotalAmount:N0}đ)!";
             await LoadOrdersAsync();
             await InvokeAsync(StateHasChanged);
         }
-        catch (ObjectDisposedException)
+    }
+
+    /// <summary>
+    /// YC2: Khi Bếp hoặc quầy đổi trạng thái -> cập nhật lại màn hình ngay
+    /// </summary>
+    [JSInvokable]
+    public async Task OnOrderStatusChanged(OrderStatusChangedDto status)
+    {
+        if (status.BranchCode == _selectedBranch)
         {
-            // Bỏ qua lỗi nếu người dùng đã chuyển sang trang khác
+            _latestAlert = $"Đơn #{status.TicketId} chuyển sang: {status.NewStatusText}";
+            await LoadOrdersAsync();
+            await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex)
+    }
+
+    [JSInvokable]
+    public Task OnMenuItemSoldOut(string id, string name)
+    {
+        // Không ảnh hưởng đến danh sách đơn đang chế biến
+        return Task.CompletedTask;
+    }
+
+    private async Task OnBranchChanged(ChangeEventArgs e)
+    {
+        var newBranch = e.Value?.ToString() ?? "DN";
+        if (newBranch != _selectedBranch)
         {
-            Console.WriteLine($"Error in RefreshDataAsync: {ex.Message}");
+            // Rời nhóm cũ và vào nhóm mới
+            await JS.InvokeVoidAsync("signalRHelper.leaveGroup", "LeaveBranchKitchen", _selectedBranch);
+            _selectedBranch = newBranch;
+            await JS.InvokeVoidAsync("signalRHelper.joinGroup", "JoinBranchKitchen", _selectedBranch);
+            
+            await LoadOrdersAsync();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -86,7 +228,8 @@
         var allActiveOrders = await context.OrderTickets.AsNoTracking()
             .Include(o => o.TicketLines)
             .ThenInclude(t => t.MenuItem)
-            .Where(o => o.Status == (int)OrderStatus.Pending || o.Status == (int)OrderStatus.Processing || o.Status == (int)OrderStatus.Ready)
+            .Where(o => o.BranchCode == _selectedBranch && 
+                       (o.Status == (int)OrderStatus.Pending || o.Status == (int)OrderStatus.Processing || o.Status == (int)OrderStatus.Ready))
             .OrderBy(o => o.CreatedAt)
             .ToListAsync();
 
@@ -95,40 +238,68 @@
         _readyOrders = allActiveOrders.Where(o => o.Status == (int)OrderStatus.Ready).ToList();
     }
 
+    /// <summary>
+    /// Mô phỏng Quầy tạo đơn mới: Lưu DB và phát sự kiện OrderCreated qua SignalR
+    /// </summary>
     private async Task CreateTestOrderAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        var random = new Random();
-        var menuItems = await context.MenuItems.ToListAsync();
+        var menuItems = await context.MenuItems.Where(m => m.IsAvailable).Take(3).ToListAsync();
         if (!menuItems.Any()) return;
 
-        var ticketId = $"TEST{DateTime.Now:HHmmss}{random.Next(10,99)}";
+        var random = new Random();
+        var ticketId = $"ORD-{_selectedBranch}-{DateTime.Now:HHmmss}";
+        var selectedItem = menuItems[random.Next(menuItems.Count)];
+
         var ticket = new OrderTicket
         {
             TicketId = ticketId,
-            PosName = "POS_TEST",
+            PosName = $"POS_{_selectedBranch}_01",
             CreatedAt = DateTime.Now,
             Status = (int)OrderStatus.Pending,
-            BranchCode = "B01",
-            TotalAmount = 0
+            BranchCode = _selectedBranch,
+            TotalAmount = selectedItem.Price
         };
 
         var line = new TicketLine
         {
             OrderTicketId = ticketId,
-            MenuItemId = menuItems[0].Id,
-            Quantity = random.Next(1, 4),
-            UnitPrice = menuItems[0].Price
+            MenuItemId = selectedItem.Id,
+            Quantity = 1,
+            UnitPrice = selectedItem.Price
         };
-        
-        ticket.TotalAmount = line.Quantity * line.UnitPrice;
+
         context.OrderTickets.Add(ticket);
         context.TicketLines.Add(line);
         await context.SaveChangesAsync();
-        
-        await LoadOrdersAsync();
+
+        // PHÁT SỰ KIỆN SIGNALR CHO BẾP CHI NHÁNH ĐÓ
+        var orderDto = new OrderCreatedDto
+        {
+            TicketId = ticketId,
+            BranchCode = _selectedBranch,
+            PosName = ticket.PosName,
+            TotalAmount = ticket.TotalAmount,
+            CreatedAt = ticket.CreatedAt,
+            Status = ticket.Status,
+            Lines = new List<TicketLineDto>
+            {
+                new TicketLineDto
+                {
+                    MenuItemId = selectedItem.Id,
+                    MenuItemName = selectedItem.Name,
+                    Quantity = 1,
+                    UnitPrice = selectedItem.Price
+                }
+            }
+        };
+
+        await NotificationService.PublishOrderCreatedAsync(orderDto);
     }
 
+    /// <summary>
+    /// Xử lý khi Bếp bấm nút chuyển trạng thái trên thẻ đơn hàng
+    /// </summary>
     private async Task HandleStatusChanged(string ticketId, int newStatusAction)
     {
         using var context = DbFactory.CreateDbContext();
@@ -143,21 +314,53 @@
                 TicketId = ticketId,
                 OldStatus = oldStatus,
                 NewStatus = newStatusAction,
-                ChangedBy = "KitchenStaff", // Giả lập người thao tác
+                ChangedBy = $"Bếp trưởng ({order.BranchCode})",
                 ChangedAt = DateTime.Now
             };
 
             context.OrderStatusHistories.Add(history);
             await context.SaveChangesAsync();
 
-            // Refresh UI immediately
+            // PHÁT SỰ KIỆN SIGNALR CHO QUẦY VÀ KHÁCH HÀNG (YC2)
+            var statusDto = new OrderStatusChangedDto
+            {
+                TicketId = ticketId,
+                BranchCode = order.BranchCode,
+                OldStatus = oldStatus,
+                NewStatus = newStatusAction,
+                NewStatusText = GetStatusName(newStatusAction),
+                ChangedBy = history.ChangedBy,
+                ChangedAt = history.ChangedAt
+            };
+
+            await NotificationService.PublishOrderStatusChangedAsync(statusDto);
+
+            // Cập nhật giao diện Bếp ngay
             await LoadOrdersAsync();
             await InvokeAsync(StateHasChanged);
         }
     }
 
-    public void Dispose()
+    private string GetStatusName(int status) => status switch
     {
-        _timer?.Dispose();
+        (int)OrderStatus.Pending => "Chờ tiếp nhận",
+        (int)OrderStatus.Processing => "Đang chế biến",
+        (int)OrderStatus.Ready => "Sẵn sàng nhận món",
+        (int)OrderStatus.Delivered => "Đã giao",
+        (int)OrderStatus.Cancelled => "Đã huỷ",
+        _ => "Không rõ"
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_dotNetRef != null)
+            {
+                await JS.InvokeVoidAsync("signalRHelper.leaveGroup", "LeaveBranchKitchen", _selectedBranch);
+            }
+        }
+        catch { }
+        _dotNetRef?.Dispose();
     }
 }

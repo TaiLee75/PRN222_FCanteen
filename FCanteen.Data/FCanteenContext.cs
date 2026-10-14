@@ -26,6 +26,9 @@ namespace FCanteen.Data
         // Lab 06
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
 
+        // Lab 07 - Bảng thứ 15 lưu mọi sự kiện SignalR đã phát
+        public DbSet<Notification> Notifications { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
