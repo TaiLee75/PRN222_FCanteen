@@ -49,6 +49,28 @@
         </div>
     </div>
 
+    <!-- Cảnh báo Tồn kho thấp từ Worker Service (Lab 08) -->
+    @if (_activeLowStockAlerts.Any())
+    {
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm border-start border-4 border-danger" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-triangle-fill text-danger fs-4 me-3"></i>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">[CẢNH BÁO TỰ ĐỘNG TỪ WORKER SERVICE] Phát hiện nguyên liệu dưới ngưỡng an toàn:</h6>
+                    <ul class="mb-0 ps-3">
+                        @foreach (var alert in _activeLowStockAlerts)
+                        {
+                            <li>
+                                <strong>@alert.IngredientName</strong>: Tồn kho hiện tại <span class="badge bg-danger">@alert.CurrentStock @alert.Unit</span> (Ngưỡng cảnh báo: @alert.WarningThreshold @alert.Unit) — <em>@alert.AlertTime.ToString("HH:mm:ss")</em>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <button type="button" class="btn-close" @onclick="() => _activeLowStockAlerts.Clear()"></button>
+        </div>
+    }
+
     <!-- Thông báo Realtime Toast khi có đơn mới xuất hiện -->
     @if (!string.IsNullOrEmpty(_latestAlert))
     {
@@ -135,6 +157,7 @@
     private bool _isConnected = false;
     private string _selectedBranch = "DN"; // Mặc định là chi nhánh Đà Nẵng
     private string? _latestAlert;
+    private List<FCanteen.Data.Dtos.StockAlertDto> _activeLowStockAlerts = new();
     private List<OrderTicket> _pendingOrders = new();
     private List<OrderTicket> _processingOrders = new();
     private List<OrderTicket> _readyOrders = new();
@@ -205,6 +228,16 @@
     {
         // Không ảnh hưởng đến danh sách đơn đang chế biến
         return Task.CompletedTask;
+    }
+
+    [JSInvokable]
+    public async Task OnLowStockAlert(FCanteen.Data.Dtos.StockAlertDto alert)
+    {
+        // Xóa alert cũ của nguyên liệu này nếu có và chèn cái mới lên đầu
+        _activeLowStockAlerts.RemoveAll(a => a.IngredientId == alert.IngredientId);
+        _activeLowStockAlerts.Insert(0, alert);
+        _latestAlert = $"CẢNH BÁO TỒN KHO: {alert.IngredientName} chỉ còn {alert.CurrentStock} {alert.Unit}!";
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task OnBranchChanged(ChangeEventArgs e)

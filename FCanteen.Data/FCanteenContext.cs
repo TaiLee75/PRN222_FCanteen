@@ -29,6 +29,10 @@ namespace FCanteen.Data
         // Lab 07 - Bảng thứ 15 lưu mọi sự kiện SignalR đã phát
         public DbSet<Notification> Notifications { get; set; }
 
+        // Lab 08 - Worker Service (StockAlert & DailyReport)
+        public DbSet<StockAlert> StockAlerts { get; set; }
+        public DbSet<DailyReport> DailyReports { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -45,6 +49,12 @@ namespace FCanteen.Data
             modelBuilder.Entity<MenuItem>().Property(m => m.CostPrice).HasColumnType("decimal(18, 2)");
             modelBuilder.Entity<Ingredient>().Property(i => i.UnitPrice).HasColumnType("decimal(18, 2)");
             modelBuilder.Entity<MenuItemIngredient>().Property(m => m.Quantity).HasColumnType("decimal(18, 2)");
+
+            // Lab 08 Decimal Types
+            modelBuilder.Entity<StockAlert>().Property(s => s.CurrentStock).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<StockAlert>().Property(s => s.WarningThreshold).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<DailyReport>().Property(d => d.TotalRevenue).HasColumnType("decimal(18, 2)");
+            modelBuilder.Entity<DailyReport>().Property(d => d.CancellationRate).HasColumnType("decimal(18, 2)");
 
             // Seed Categories
             modelBuilder.Entity<Category>().HasData(

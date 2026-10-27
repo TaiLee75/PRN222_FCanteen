@@ -12,5 +12,7 @@ namespace FCanteen.KitchenServer.Hubs
         Task OrderStatusChanged(OrderStatusChangedDto statusDto);
         Task MenuItemSoldOut(string menuItemId, string itemName);
         Task UpdateConnectionCount(int count);
+        // Lab 08: Cảnh báo nguyên liệu dưới ngưỡng từ Worker Service
+        Task LowStockAlert(FCanteen.Data.Dtos.StockAlertDto alert);
     }
 }

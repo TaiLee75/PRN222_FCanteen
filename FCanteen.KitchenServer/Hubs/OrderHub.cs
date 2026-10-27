@@ -175,6 +175,20 @@ namespace FCanteen.KitchenServer.Hubs
             );
         }
 
+        /// <summary>
+        /// Lab 08: Worker Service gọi method này để phát cảnh báo tồn kho tới toàn bộ Client
+        /// </summary>
+        public async Task SendLowStockAlert(FCanteen.Data.Dtos.StockAlertDto alert)
+        {
+            await Clients.All.LowStockAlert(alert);
+
+            await SaveNotificationAsync(
+                eventType: "LowStockAlert",
+                content: $"[CẢNH BÁO TỒN KHO] Nguyên liệu [{alert.IngredientName}] chỉ còn {alert.CurrentStock} {alert.Unit} (ngưỡng: {alert.WarningThreshold})",
+                recipient: "All"
+            );
+        }
+
         #endregion
 
         #region Helper lưu Notification xuống Database

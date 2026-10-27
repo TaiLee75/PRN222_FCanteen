@@ -110,5 +110,79 @@ namespace FCanteen.Data
             stopwatch.Stop();
             Console.WriteLine($"Hoàn tất sinh dữ liệu trong {stopwatch.ElapsedMilliseconds} ms.");
         }
+
+        public static async Task SeedLab08DataAsync(FCanteenContext context)
+        {
+            // 1. Seed nguyên liệu mẫu (cả tồn kho an toàn và dưới ngưỡng báo động)
+            if (!context.Ingredients.Any())
+            {
+                var ingredients = new List<Ingredient>
+                {
+                    new Ingredient { Name = "Gạo ST25", Unit = "Kg", Stock = 150, WarningThreshold = 50, UnitPrice = 25000, SupplierId = 1 },
+                    new Ingredient { Name = "Thịt heo ba chỉ", Unit = "Kg", Stock = 40, WarningThreshold = 20, UnitPrice = 110000, SupplierId = 1 },
+                    new Ingredient { Name = "Thịt bò Úc", Unit = "Kg", Stock = 8, WarningThreshold = 15, UnitPrice = 240000, SupplierId = 1 }, // Sắp hết (8 <= 15)
+                    new Ingredient { Name = "Trứng gà ta", Unit = "Quả", Stock = 15, WarningThreshold = 50, UnitPrice = 3000, SupplierId = 2 }, // Sắp hết (15 <= 50)
+                    new Ingredient { Name = "Dầu ăn Simply", Unit = "Lít", Stock = 4, WarningThreshold = 10, UnitPrice = 48000, SupplierId = 2 }, // Sắp hết (4 <= 10)
+                    new Ingredient { Name = "Hành lá", Unit = "Kg", Stock = 1.5m, WarningThreshold = 5, UnitPrice = 35000, SupplierId = 2 }, // Sắp hết (1.5 <= 5)
+                    new Ingredient { Name = "Gia vị hạt nêm", Unit = "Gói", Stock = 80, WarningThreshold = 20, UnitPrice = 12000, SupplierId = 2 }
+                };
+
+                await context.Ingredients.AddRangeAsync(ingredients);
+                await context.SaveChangesAsync();
+                Console.WriteLine("Đã seed thành công 7 nguyên liệu mẫu cho Lab 08.");
+            }
+
+            // 2. Seed đơn hàng mẫu ngày hôm qua để Worker 2 (chốt báo cáo) có dữ liệu tổng hợp
+            var yesterday = DateTime.Today.AddDays(-1);
+            bool hasYesterdayOrders = context.OrderTickets.Any(o => o.CreatedAt.Date == yesterday.Date);
+            if (!hasYesterdayOrders)
+            {
+                var menuItems = context.MenuItems.Take(5).ToList();
+                if (menuItems.Any())
+                {
+                    var tickets = new List<OrderTicket>();
+                    var lines = new List<TicketLine>();
+
+                    for (int i = 1; i <= 6; i++)
+                    {
+                        var ticketId = $"T{yesterday:yyMMdd}{i:D4}";
+                        // Đơn 5 là đơn huỷ (Cancelled = 5), các đơn khác là Delivered (4)
+                        int status = (i == 5) ? (int)OrderStatus.Cancelled : (int)OrderStatus.Delivered;
+                        var orderTime = yesterday.AddHours(10 + i).AddMinutes(15 * i);
+
+                        var ticket = new OrderTicket
+                        {
+                            TicketId = ticketId,
+                            BranchCode = "DN",
+                            PosName = "POS_01",
+                            Status = status,
+                            CreatedAt = orderTime,
+                            TotalAmount = 0
+                        };
+
+                        decimal total = 0;
+                        // Món 0 bán chạy nhất (cho nhiều số lượng)
+                        var item1 = menuItems[0];
+                        lines.Add(new TicketLine { OrderTicketId = ticketId, MenuItemId = item1.Id, Quantity = 2 + i, UnitPrice = item1.Price });
+                        total += item1.Price * (2 + i);
+
+                        if (menuItems.Count > 1)
+                        {
+                            var item2 = menuItems[1];
+                            lines.Add(new TicketLine { OrderTicketId = ticketId, MenuItemId = item2.Id, Quantity = 1, UnitPrice = item2.Price });
+                            total += item2.Price * 1;
+                        }
+
+                        ticket.TotalAmount = total;
+                        tickets.Add(ticket);
+                    }
+
+                    await context.OrderTickets.AddRangeAsync(tickets);
+                    await context.TicketLines.AddRangeAsync(lines);
+                    await context.SaveChangesAsync();
+                    Console.WriteLine("Đã seed thành công 6 đơn hàng mẫu của ngày hôm qua cho Lab 08.");
+                }
+            }
+        }
     }
 }

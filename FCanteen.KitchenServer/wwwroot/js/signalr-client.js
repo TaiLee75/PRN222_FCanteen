@@ -48,6 +48,14 @@ window.signalRHelper = {
             }
         });
 
+        // Lab 08: Nhận sự kiện cảnh báo tồn kho thấp từ Worker Service
+        this.connection.on("LowStockAlert", (alert) => {
+            console.log("[SignalR JS] LowStockAlert:", alert);
+            if (this.dotNetHelper) {
+                this.dotNetHelper.invokeMethodAsync("OnLowStockAlert", alert);
+            }
+        });
+
         // BẮT BUỘC: Khi người dùng tắt tab hoặc reload, lập tức gửi lệnh ngắt kết nối WebSocket
         // Giúp server trừ số thiết bị kết nối ngay trong 0.1 giây!
         window.addEventListener("beforeunload", () => {

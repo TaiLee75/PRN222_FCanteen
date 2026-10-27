@@ -65,6 +65,44 @@ namespace FCanteen.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("FCanteen.Data.Entities.DailyReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("CancellationRate")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("CancelledOrdersCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ReportDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TopSellingItem")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TopSellingQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalOrders")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalRevenue")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DailyReports");
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.DailySettlement", b =>
                 {
                     b.Property<int>("Id")
@@ -494,6 +532,46 @@ namespace FCanteen.Data.Migrations
                     b.ToTable("Staffs");
                 });
 
+            modelBuilder.Entity("FCanteen.Data.Entities.StockAlert", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AlertTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("CurrentStock")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<int>("IngredientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("IngredientName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("WarningThreshold")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IngredientId");
+
+                    b.ToTable("StockAlerts");
+                });
+
             modelBuilder.Entity("FCanteen.Data.Entities.Supplier", b =>
                 {
                     b.Property<int>("Id")
@@ -612,6 +690,17 @@ namespace FCanteen.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("OrderTicket");
+                });
+
+            modelBuilder.Entity("FCanteen.Data.Entities.StockAlert", b =>
+                {
+                    b.HasOne("FCanteen.Data.Entities.Ingredient", "Ingredient")
+                        .WithMany()
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ingredient");
                 });
 
             modelBuilder.Entity("FCanteen.Data.Entities.TicketLine", b =>
